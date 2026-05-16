@@ -16,7 +16,7 @@ class IndexRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
-    top_k = int = 10
+    top_k: int = 10
     tags: list[str] = []
     
 #app routes

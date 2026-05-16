@@ -385,6 +385,57 @@ pytest test/ -v
 python test/embedder_test.py
 ```
 
+### Agent
+
+#### Install Ollama + pull a model
+```bash
+# Install Ollama
+brew install ollama
+
+# Pull the model (one-time download, ~4.7 GB)
+ollama pull qwen2.5:7b
+
+# Verify it's working
+ollama run qwen2.5:7b "reply with: pong"
+```
+#### leave Ollama running
+```bash
+ollama serve &
+```
+
+#### Install OpenClaw CLI
+```bash
+npm install -g openclaw@latest
+
+# Verify
+openclaw --version
+```
+#### Register Ollama as the provider
+
+```bash
+# Tell OpenClaw Ollama is the provider
+export OLLAMA_API_KEY="ollama-local"
+
+openclaw models list --provider ollama    # shows installed models
+openclaw models set ollama/qwen2.5:7b    # set as default
+```
+
+Verify the model can receive tool calls:
+```bash
+OLLAMA_API_KEY=ollama-local \
+openclaw infer model run \
+  --local \
+  --model ollama/qwen2.5:7b \
+  --prompt "Reply with exactly: pong" \
+  --json
+```
+#### Onboard the photo agent
+```bash
+# Run in your photo-agent project directory
+openclaw onboard --install-daemon
+```
+
+
 ### Code Structure Guidelines
 
 - **Pipeline modules** handle data processing (embeddings, indexing)
@@ -423,3 +474,6 @@ For issues, questions, or suggestions:
 ---
 
 **Happy searching! 📸**
+
+
+![Output](image-1.png)
