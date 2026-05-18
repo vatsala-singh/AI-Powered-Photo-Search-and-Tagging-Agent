@@ -4,13 +4,13 @@ A **local-first, AI-powered photo assistant** that enables natural language sear
 
 ## Features
 
-- 🔍 **Natural Language Search** – Find photos using plain English queries ("sunset over mountains", "group photo of friends")
-- 🏷️ **Auto-Tagging** – Zero-shot automatic tagging of images based on visual content
-- 🔎 **Duplicate Detection** – Identify and cluster near-identical images by vector similarity
-- 📱 **Smart Albums** – Group images semantically by topic or theme
-- 📷 **OCR & Face Detection** – Extract text from screenshots and cluster faces
-- 💻 **Local-First** – All processing happens on-device; no cloud services required
-- ⚡ **Fast** – CPU-friendly embedding model (ViT-B/32) with instant search results
+- **Natural Language Search** – Find photos using plain English queries ("sunset over mountains", "group photo of friends")
+- **Auto-Tagging** – Zero-shot automatic tagging of images based on visual content
+- **Duplicate Detection** – Identify and cluster near-identical images by vector similarity
+- **Smart Albums** – Group images semantically by topic or theme
+- **OCR & Face Detection** – Extract text from screenshots and cluster faces
+- **Local-First** – All processing happens on-device; no cloud services required
+- **Fast** – CPU-friendly embedding model (ViT-B/32) with instant search results
 
 ## System Architecture
 
@@ -539,4 +539,5 @@ For issues, questions, or suggestions:
 ---
 
 **Happy searching! 📸**
+
 
