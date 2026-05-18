@@ -1,9 +1,6 @@
-open-clip-torch>=2.24.0
+fastembed>=0.4.0
 qdrant-edge-py
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
 pillow>=10.3.0
-torch>=2.3.0
-torchvision>=0.18.0
-transformers>=4.40.0
 python-multipart>=0.0.9
