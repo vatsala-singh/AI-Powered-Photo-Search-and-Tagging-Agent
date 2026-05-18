@@ -22,7 +22,7 @@ Photos → CLIP Embeddings → Qdrant Edge → OpenClaw Agent → Search Results
 
 | Component | Purpose |
 |-----------|---------|
-| **Embedder** | CLIP/SigLIP model for generating vector embeddings from images |
+| **Embedder** | FastEmbed-powered CLIP embeddings (text & image) for vector generation |
 | **Indexer** | Batch and incremental image indexing pipeline |
 | **Qdrant Edge** | In-process vector database (no server needed) for fast local similarity search |
 | **Search Tool** | Natural language photo search via semantic similarity |
@@ -103,17 +103,16 @@ pip install -r requirements.txt
 ```
 
 This installs:
-- `open-clip-torch` – CLIP embedding model
-- `qdrant-edge` – Local in-process vector database (no server needed)
+- `fastembed` – Lightweight, efficient embedding models (CLIP text & image encoders)
+- `qdrant-edge-py` – Local in-process vector database (no server needed)
 - `fastapi` & `uvicorn` – Web server
 - `pillow` – Image processing
-- `torch` & `torchvision` – PyTorch deep learning framework
 - Additional utilities
 
 ### 4. Verify installation
 
 ```bash
-python -c "import torch; import clip; from qdrant_edge import EdgeShard; print('✓ All dependencies installed')"
+python -c "from fastembed import TextEmbedding, ImageEmbedding; from qdrant_edge_py import EdgeShard; print('✓ All dependencies installed')"
 ```
 
 ## Configuration
@@ -121,21 +120,22 @@ python -c "import torch; import clip; from qdrant_edge import EdgeShard; print('
 Edit [config.py](config.py) to customize:
 
 ```python
-# Embedding model
-EMBED_MODEL = "ViT-B-32"              # CLIP model variant
-EMBED_PRETRAINED = "openai"            # Pretrained weights source
-EMBED_DIM = 512                        # Vector dimension
+# FastEmbed models
+TEXT_MODEL_NAME = "Qdrant/clip-ViT-B-32-text"     # Text embedding model
+VISION_MODEL_NAME = "Qdrant/clip-ViT-B-32-vision" # Vision embedding model
+MODELS_DIR = Path("./qdrant-edge-data/models")    # Model cache directory
+EMBED_DIM = 512                                    # Vector dimension (CLIP outputs 512-d)
 
 # Qdrant Edge (local, in-process)
-SHARD_DIR = Path("./qdrant-edge-data/photos")  # Local shard directory
-VECTOR_NAME = "clip"                   # Named vector key
+SHARD_DIR = Path("./qdrant-edge-data/photos")     # Local shard directory
+VECTOR_NAME = "clip"                              # Named vector key
 
 # Search settings
-TOP_K = 10                             # Default number of results
-DUPLICATE_THRESHOLD = 0.97             # Similarity threshold for duplicates
+TOP_K = 10                                         # Default number of results
+DUPLICATE_THRESHOLD = 0.97                         # Similarity threshold for duplicates
 
 # Paths
-PHOTO_DIR = Path.home() / "Pictures"   # Default photo directory
+PHOTO_DIR = Path.home() / "Pictures"              # Default photo directory
 ```
 
 ## Quick Start

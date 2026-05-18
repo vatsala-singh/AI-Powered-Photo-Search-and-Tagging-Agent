@@ -56,10 +56,9 @@ def search(req: SearchRequest):
 @app.get("/tags/{image_id}")
 def get_tags(image_id: str):
     shard = get_shard()
-    results = shard.query(
+    results = shard.retrieve(
         QueryRequest(
-            query=Query.Fetch(ids=[image_id]),
-            limit=1,
+            points_ids=[image_id],
             with_payload=True,
             with_vector=False
         )
@@ -91,3 +90,10 @@ def chat(req: ChatRequest):
     from agent import run_agent
     reply = run_agent(req.message, history=req.history)
     return {"reply": reply}
+
+
+@app.post("/tag")
+def tag(req: TagRequest):
+    from tools.tag import tag_image
+    result = tag_image(req.path)
+    return result

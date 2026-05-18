@@ -1,5 +1,5 @@
 # tools/duplicates.py
-from qdrant_edge import Query, QueryRequest
+from qdrant_edge import Query, QueryRequest, ScrollRequest
 
 from config import DUPLICATE_THRESHOLD, VECTOR_NAME
 from store.qdrant_client import get_shard
@@ -8,7 +8,7 @@ from store.qdrant_client import get_shard
 def _load_all_points() -> list:
     """
     Page through the entire shard and return all points with vectors + payloads.
-    EdgeShard has no scroll method — we use Query.Scroll with offset pagination.
+    EdgeShard has scroll method — we use ScrollRequest with offset pagination.
     """
     shard = get_shard()
     all_points = []
@@ -16,9 +16,9 @@ def _load_all_points() -> list:
     batch_size = 256
 
     while True:
-        batch = shard.query(
-            QueryRequest(
-                query=Query.Scroll(offset=offset),
+        batch, _ = shard.scroll(
+            ScrollRequest(
+                offset=offset,
                 limit=batch_size,
                 with_vector=True,
                 with_payload=True,

@@ -1,14 +1,33 @@
-# tools/duplicates.py
-from qdrant_edge import Query, QueryRequest
+from qdrant_edge import Query, QueryRequest, ScrollRequest, UpdateOperation
 
 from config import DUPLICATE_THRESHOLD, VECTOR_NAME
+from pipeline.embedder import embed_image, embed_text
 from store.qdrant_client import get_shard
+import numpy as np
 
+TAG_VOCABULARY = [
+    "sunset", "sunrise", "beach", "ocean", "mountain", "forest", "city",
+    "night", "snow", "rain", "fog", "sunny", "cloudy",
+    "dog", "cat", "bird", "people", "crowd", "portrait", "selfie",
+    "food", "coffee", "restaurant", "travel", "architecture",
+    "car", "road", "nature", "flowers", "trees",
+    "indoor", "outdoor", "party", "celebration", "sport",
+    "screenshot", "document", "text", "map",
+]
+
+_tag_vectors: dict[str, np.ndarray] = {}
+
+def _get_tag_vectors() -> dict[str, np.ndarray]:
+    global _tag_vectors
+    if not _tag_vectors:
+        print("[tagger] Pre-computing tag embeddings ...")
+        _tag_vectors = {tag: embed_text(tag) for tag in TAG_VOCABULARY}
+    return _tag_vectors
 
 def _load_all_points() -> list:
     """
     Page through the entire shard and return all points with vectors + payloads.
-    EdgeShard has no scroll method — we use Query.Scroll with offset pagination.
+    EdgeShard has scroll method — we use ScrollRequest with offset pagination.
     """
     shard = get_shard()
     all_points = []
@@ -16,9 +35,9 @@ def _load_all_points() -> list:
     batch_size = 256
 
     while True:
-        batch = shard.query(
-            QueryRequest(
-                query=Query.Scroll(offset=offset),
+        batch, _ = shard.scroll(
+            ScrollRequest(
+                offset=offset,
                 limit=batch_size,
                 with_vector=True,
                 with_payload=True,
@@ -84,3 +103,66 @@ def find_duplicates(threshold: float = DUPLICATE_THRESHOLD) -> dict:
         "duplicate_clusters": len(clusters),
         "clusters":           clusters,
     }
+    
+def tag_image(path: str, threshold: float = 0.20, max_tags: int = 6) -> dict:
+    """
+    Generate tags for an image using zero-shot CLIP classification.
+    Tags with cosine similarity above `threshold` are included.
+    Tags are persisted back into the shard's payload for that point.
+    """
+    img_vec = embed_image(path)
+    if img_vec is None:
+        return {"path": path, "tags": [], "error": "Could not load image"}
+ 
+    tag_vecs = _get_tag_vectors()
+ 
+    scores = {
+        tag: float(np.dot(img_vec, vec))   # both normalized → cosine sim
+        for tag, vec in tag_vecs.items()
+    }
+ 
+    tags = sorted(
+        [t for t, s in scores.items() if s >= threshold],
+        key=lambda t: scores[t],
+        reverse=True,
+    )[:max_tags]
+ 
+    _store_tags(path, tags)
+ 
+    return {"path": path, "tags": tags}
+ 
+ 
+def _store_tags(path: str, tags: list[str]) -> None:
+    """
+    Find the point with this file path and update its 'tags' payload.
+    Uses Qdrant Edge's UpdateOperation.set_payload.
+    """
+    shard = get_shard()
+ 
+    # Find the point ID for this path via a scroll scan
+    results,_ = shard.scroll(
+        ScrollRequest(
+            offset=0,
+            limit=10_000,
+            with_vector=False,
+            with_payload=True,
+        )
+    )
+ 
+    point_id = None
+    for point in results:
+        if (point.payload or {}).get("path") == path:
+            point_id = point.id
+            break
+ 
+    if point_id is None:
+        print(f"[tagger] Warning: could not find point for path {path}")
+        return
+ 
+    shard.update(
+        UpdateOperation.set_payload(
+            [point_id],
+            {"tags": tags},
+        )
+    )
+ 

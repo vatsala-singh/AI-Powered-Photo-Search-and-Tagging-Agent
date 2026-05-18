@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 
 from PIL import Image
-from qdrant_edge import Point, UpdateOperation
+from qdrant_edge import Point, UpdateOperation, ScrollRequest
 
 from config import VECTOR_NAME
 from store.qdrant_client import get_shard
@@ -28,12 +28,11 @@ def _load_indexed_paths() -> set[str]:
     batch_size = 256
 
     while True:
-        from qdrant_edge import Query, QueryRequest
-        # Use a dummy zero-vector broad scan to page through all points.
+        # Use ScrollRequest to page through all points with offset pagination.
         # We only need payloads, not vectors.
-        results = shard.query(
-            QueryRequest(
-                query=Query.Nearest([0.0] * 512, using=VECTOR_NAME),
+        results, _ = shard.scroll(
+            ScrollRequest(
+                offset=offset,
                 limit=batch_size,
                 with_vector=False,
                 with_payload=True,
