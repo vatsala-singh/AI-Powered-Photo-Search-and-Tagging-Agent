@@ -1,38 +1,56 @@
-from qdrant_client import QdrantClient
-from qdrant_client.models import (
+from pathlib import Path
+from qdrant_edge import(
     Distance,
-    VectorParams,
-    PayloadSchemaType
+    EdgeConfig,
+    EdgeShard,
+    EdgeVectorParams,
 )
-from config import QDRANT_HOST, QDRANT_PORT, COLLECTION_NAME, EMBED_DIM
+from config import SHARD_DIR, VECTOR_NAME, EMBED_DIM
 
-_client: QdrantClient | None = None
+_shard: EdgeShard | None = None
 
-def get_client() -> QdrantClient:
-    #singleton Qdrant client
-    global _client
-    if _client is None:
-        _client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-    return _client
-
-def ensure_collection():
-    client = get_client()
-    existing = [c.name for c in client.get_collections().collections]
+def get_shard() -> EdgeShard:
+    """
+    Return the singleton EdgeShard, creating it on first call.
+ 
+    - If SHARD_DIR does not exist → create a brand-new shard.
+    - If SHARD_DIR already contains data → reopen it (no config needed).
+ 
+    EdgeShard runs entirely in-process. No binary, no port, no network.
+    """
+    global _shard
+    if _shard is not None:
+        return _shard
     
-    if COLLECTION_NAME not in existing:
-        client.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=VectorParams(size=EMBED_DIM, 
-                                        distance=Distance.COSINE),
-        )
-        #index 'path' for faster lookups and duplicate detection
-        client.create_payload_index(
-            collection_name=COLLECTION_NAME,
-            field_name="path",
-            schema=PayloadSchemaType.KEYWORD
-        )
-        print(f"[store] Created Collection '{COLLECTION_NAME}' with vector size {EMBED_DIM}")
+    SHARD_DIR.mkdir(parents=True, exist_ok=True)
+    # Detect whether this is a fresh shard or an existing one.
+    # EdgeShard.create() fails if data already exists on disk.
+    shard_has_data = any(SHARD_DIR.iterdir())
+    
+    if shard_has_data:
+        print(f"[qdrant_client] Reopening existing shard at '{SHARD_DIR}'")
+        _shard = EdgeShard.load(path=SHARD_DIR)
     else:
-        print(f"[store] Collection '{COLLECTION_NAME}' already exists")
-        
-    
+        print(f"[qdrant_client] Creating new shard at '{SHARD_DIR}'")
+        config = EdgeConfig(
+            vectors={
+                VECTOR_NAME: EdgeVectorParams(
+                    size=EMBED_DIM,
+                    distance=Distance.Cosine
+                )
+            }
+        )
+        _shard = EdgeShard.create(path=str(SHARD_DIR), config=config)
+        print(f"[store] Shard ready — vector: '{VECTOR_NAME}', dim: {EMBED_DIM}")
+    return _shard
+
+def close_shard() -> None:
+    """
+    Flush and close the shard. Must be called on application shutdown
+    to guarantee all in-flight writes are persisted to disk.
+    """
+    global _shard
+    if _shard is not None:
+        _shard.close()
+        _shard = None
+        print("[store] Shard closed and flushed to disk.")

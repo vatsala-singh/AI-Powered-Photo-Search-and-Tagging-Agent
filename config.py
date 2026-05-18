@@ -6,10 +6,8 @@ EMBED_PRETRAINED = "openai"        # pretrained weights tag
 EMBED_DIM = 512                    # vector dimension for ViT-B/32
 
 # --- Qdrant ---
-QDRANT_HOST = "localhost"
-QDRANT_PORT = 6333
-COLLECTION_NAME = "photos"
-
+SHARD_DIR   = Path("./qdrant-edge-data/photos")  # where the shard lives on disk
+VECTOR_NAME = "clip"                         # named vector key inside the shard
 # --- Search ---
 TOP_K = 10                         # default number of results to return
 DUPLICATE_THRESHOLD = 0.97         # cosine similarity threshold for duplicates

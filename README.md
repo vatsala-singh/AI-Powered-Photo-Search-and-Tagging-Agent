@@ -24,11 +24,20 @@ Photos → CLIP Embeddings → Qdrant Edge → OpenClaw Agent → Search Results
 |-----------|---------|
 | **Embedder** | CLIP/SigLIP model for generating vector embeddings from images |
 | **Indexer** | Batch and incremental image indexing pipeline |
-| **Qdrant Edge** | On-device vector database for fast similarity search |
+| **Qdrant Edge** | In-process vector database (no server needed) for fast local similarity search |
 | **Search Tool** | Natural language photo search via semantic similarity |
 | **Tagging Tool** | Zero-shot multi-label image classification |
 | **Duplicates Tool** | Cluster detection for finding duplicate/similar images |
 | **FastAPI Server** | REST API for indexing, searching, and retrieval |
+
+### About Qdrant Edge
+
+**Qdrant Edge** is an embedded, in-process vector database that:
+- ✅ Runs entirely on your machine (no network, no external services)
+- ✅ Automatically persists data to disk at `./qdrant-edge-data/photos`
+- ✅ Provides instant startup with zero configuration
+- ✅ Supports the same powerful vector search operations as server-mode Qdrant
+- ✅ Flushes writes on application shutdown to ensure data integrity
 
 ## Project Structure
 
@@ -63,8 +72,8 @@ ai-photo-agent/
 
 - Python 3.9+
 - pip or conda
-- Qdrant Edge (runs locally, starts automatically)
 - ~2GB free disk space (for models and vector database)
+- **No external services required** – Qdrant Edge runs entirely in-process, locally on your machine
 
 ## Installation
 
@@ -95,7 +104,7 @@ pip install -r requirements.txt
 
 This installs:
 - `open-clip-torch` – CLIP embedding model
-- `qdrant-client` – Qdrant vector database client
+- `qdrant-edge` – Local in-process vector database (no server needed)
 - `fastapi` & `uvicorn` – Web server
 - `pillow` – Image processing
 - `torch` & `torchvision` – PyTorch deep learning framework
@@ -104,7 +113,7 @@ This installs:
 ### 4. Verify installation
 
 ```bash
-python -c "import torch; import clip; import qdrant_client; print('✓ All dependencies installed')"
+python -c "import torch; import clip; from qdrant_edge import EdgeShard; print('✓ All dependencies installed')"
 ```
 
 ## Configuration
@@ -113,20 +122,20 @@ Edit [config.py](config.py) to customize:
 
 ```python
 # Embedding model
-EMBED_MODEL = "ViT-B-32"       # CLIP model variant
-EMBED_PRETRAINED = "openai"    # Pretrained weights source
-EMBED_DIM = 512                # Vector dimension
+EMBED_MODEL = "ViT-B-32"              # CLIP model variant
+EMBED_PRETRAINED = "openai"            # Pretrained weights source
+EMBED_DIM = 512                        # Vector dimension
 
-# Qdrant database
-QDRANT_HOST = "localhost"
-QDRANT_PORT = 6333
+# Qdrant Edge (local, in-process)
+SHARD_DIR = Path("./qdrant-edge-data/photos")  # Local shard directory
+VECTOR_NAME = "clip"                   # Named vector key
 
 # Search settings
-TOP_K = 10                     # Default number of results
-DUPLICATE_THRESHOLD = 0.97     # Similarity threshold for duplicates
+TOP_K = 10                             # Default number of results
+DUPLICATE_THRESHOLD = 0.97             # Similarity threshold for duplicates
 
 # Paths
-PHOTO_DIR = Path.home() / "Pictures"  # Default photo directory
+PHOTO_DIR = Path.home() / "Pictures"   # Default photo directory
 ```
 
 ## Quick Start
@@ -139,7 +148,7 @@ PHOTO_DIR = Path.home() / "Pictures"  # Default photo directory
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`
+The API will be available at `http://localhost:8000`. Qdrant Edge automatically initializes its local shard on first use and reuses it on subsequent runs.
 
 #### API Documentation
 
@@ -147,16 +156,16 @@ Interactive API docs available at:
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 
-#### Index photos
+#### API Usage with cURL
 
+**Index photos**
 ```bash
 curl -X POST "http://localhost:8000/index" \
   -H "Content-Type: application/json" \
   -d '{"folder": "/path/to/photos"}'
 ```
 
-#### Search photos
-
+**Search photos**
 ```bash
 curl -X POST "http://localhost:8000/search" \
   -H "Content-Type: application/json" \
@@ -167,14 +176,27 @@ curl -X POST "http://localhost:8000/search" \
   }'
 ```
 
-#### Get tags for an image
-
+**Get tags for an image**
 ```bash
-curl "http://localhost:8000/tags/{image_id}"
+curl "http://localhost:8000/tags/img_001"
 ```
 
-#### Health check
+**Chat with the agent**
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Show me photos of my dog playing in the park",
+    "history": []
+  }'
+```
 
+**Debug: Get shard statistics**
+```bash
+curl "http://localhost:8000/debug/shard-stats"
+```
+
+**Health check**
 ```bash
 curl "http://localhost:8000/health"
 ```
@@ -341,6 +363,49 @@ Health check.
 }
 ```
 
+### POST `/chat`
+Chat with the agent to perform complex photo queries and tasks.
+
+**Request:**
+```json
+{
+  "message": "Show me photos of my dog playing in the park",
+  "history": []
+}
+```
+
+**Response:**
+```json
+{
+  "reply": "I found 5 photos of your dog playing. The most recent ones show..."
+}
+```
+
+**Example with history:**
+```bash
+curl -X POST "http://localhost:8000/chat" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Can you also find sunset photos?",
+    "history": [
+      {"role": "user", "content": "Show me photos of my dog"},
+      {"role": "assistant", "content": "I found 5 photos..."}
+    ]
+  }'
+```
+
+### GET `/debug/shard-stats`
+Get vector database statistics for debugging and monitoring.
+
+**Response:**
+```json
+{
+  "shard_path": "/Users/vatsalasingh/Documents/GitHub/AI-Powered-Photo-Search-and-Tagging-Agent/storage/collections/photos/0",
+  "total_points": 1540,
+  "status": "has_data"
+}
+```
+
 ## Performance Tips
 
 - **First Index**: The initial indexing of a large photo library takes time (embedding generation is CPU-intensive). For 1000 photos, expect 5-10 minutes on a modern CPU.
@@ -350,11 +415,12 @@ Health check.
 
 ## Troubleshooting
 
-### Issue: "Qdrant connection refused"
-**Solution**: Ensure Qdrant is running. It should start automatically, but you can manually start it:
-```bash
-docker run -p 6333:6333 qdrant/qdrant
+### Issue: "Shard directory error" or "Failed to create shard"
+**Solution**: Ensure the shard directory path exists and is writable. Check your `SHARD_DIR` setting in [config.py](config.py):
+```python
+SHARD_DIR = Path("./qdrant-edge-data/photos")
 ```
+The directory will be created automatically if it doesn't exist.
 
 ### Issue: Out of memory errors
 **Solution**: Reduce batch size in config or process fewer images at once.
@@ -363,7 +429,8 @@ docker run -p 6333:6333 qdrant/qdrant
 **Solution**: 
 - Ensure you have GPU available (CUDA/Metal)
 - Check the number of indexed images
-- Verify Qdrant is responding: `curl http://localhost:6333/health`
+- Verify shard statistics: `curl http://localhost:8000/debug/shard-stats`
+- Reduce batch size in [pipeline/indexer.py](pipeline/indexer.py) if experiencing memory issues
 
 ### Issue: Poor search quality
 **Solution**:
@@ -469,11 +536,7 @@ This project is licensed under the MIT License – see LICENSE file for details.
 For issues, questions, or suggestions:
 - Open an issue on GitHub
 - Check existing issues for solutions
-- Review [context.md](context.md) for architectural details
-
 ---
 
 **Happy searching! 📸**
 
-
-![Output](image-1.png)
