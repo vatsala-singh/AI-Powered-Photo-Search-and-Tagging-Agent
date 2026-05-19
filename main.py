@@ -24,6 +24,7 @@ app = FastAPI(title="Photo Library Search Agent", version="1.0")
 #Request and response samples for strong typing and documentation
 class IndexRequest(BaseModel):
     folder: str
+    auto_tag: bool = True  # Automatically generate tags during indexing
 
 class SearchRequest(BaseModel):
     query: str
@@ -43,7 +44,7 @@ def index(req: IndexRequest):
     folder = Path(req.folder)
     if not folder.exists():
         raise HTTPException(status_code=400, detail="Folder does not exist")
-    summary = index_folder(folder)
+    summary = index_folder(folder, auto_tag=req.auto_tag)
     return {"status": "success", "summary": summary}
 
 @app.post("/search")

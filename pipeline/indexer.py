@@ -10,6 +10,7 @@ from config import VECTOR_NAME
 from store.qdrant_client import get_shard
 from store.schema import PhotoPayload
 from pipeline.embedder import embed_image
+from tools.tag import generate_tags_from_vector
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".tiff"}
 
@@ -63,10 +64,12 @@ def _get_image_meta(path: Path) -> dict:
     return {"width": width, "height": height, "timestamp": timestamp}
 
 
-def index_folder(folder: str | Path, batch_size: int = 32) -> dict:
+def index_folder(folder: str | Path, batch_size: int = 32, auto_tag: bool = True) -> dict:
     """
     Walk `folder` recursively, embed every supported image, and upsert
     into the EdgeShard. Already-indexed images are skipped.
+    
+    If auto_tag=True, generates tags for each image using CLIP zero-shot classification.
 
     Returns a summary dict: {indexed, skipped, failed}.
     """
@@ -106,10 +109,14 @@ def index_folder(folder: str | Path, batch_size: int = 32) -> dict:
             continue
 
         meta = _get_image_meta(img_path)
+        
+        # Auto-generate tags if enabled
+        tags = generate_tags_from_vector(vec) if auto_tag else []
+        
         payload = PhotoPayload(
             filename=img_path.name,
             path=path_str,
-            tags=[],
+            tags=tags,
             timestamp=meta["timestamp"],
             width=meta["width"],
             height=meta["height"],

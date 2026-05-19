@@ -24,6 +24,29 @@ def _get_tag_vectors() -> dict[str, np.ndarray]:
         _tag_vectors = {tag: embed_text(tag) for tag in TAG_VOCABULARY}
     return _tag_vectors
 
+def generate_tags_from_vector(img_vec: np.ndarray, threshold: float = 0.20, max_tags: int = 6) -> list[str]:
+    """
+    Generate tags for an image vector using zero-shot CLIP classification.
+    Tags with cosine similarity above threshold are included (up to max_tags).
+    
+    This is a utility function used for generating tags during indexing
+    or when you already have an image vector.
+    """
+    tag_vecs = _get_tag_vectors()
+    
+    scores = {
+        tag: float(np.dot(img_vec, vec))   # both normalized → cosine similarity
+        for tag, vec in tag_vecs.items()
+    }
+    
+    tags = sorted(
+        [t for t, s in scores.items() if s >= threshold],
+        key=lambda t: scores[t],
+        reverse=True,
+    )[:max_tags]
+    
+    return tags
+
 def _load_all_points() -> list:
     """
     Page through the entire shard and return all points with vectors + payloads.
@@ -114,19 +137,7 @@ def tag_image(path: str, threshold: float = 0.20, max_tags: int = 6) -> dict:
     if img_vec is None:
         return {"path": path, "tags": [], "error": "Could not load image"}
  
-    tag_vecs = _get_tag_vectors()
- 
-    scores = {
-        tag: float(np.dot(img_vec, vec))   # both normalized → cosine sim
-        for tag, vec in tag_vecs.items()
-    }
- 
-    tags = sorted(
-        [t for t, s in scores.items() if s >= threshold],
-        key=lambda t: scores[t],
-        reverse=True,
-    )[:max_tags]
- 
+    tags = generate_tags_from_vector(img_vec, threshold=threshold, max_tags=max_tags)
     _store_tags(path, tags)
  
     return {"path": path, "tags": tags}
