@@ -25,7 +25,7 @@ def _load_indexed_paths() -> set[str]:
     """
     shard = get_shard()
     indexed = set()
-    offset = 0
+    next_offset = None
     batch_size = 256
 
     while True:
@@ -33,7 +33,7 @@ def _load_indexed_paths() -> set[str]:
         # We only need payloads, not vectors.
         results, _ = shard.scroll(
             ScrollRequest(
-                offset=offset,
+                offset=next_offset,
                 limit=batch_size,
                 with_vector=False,
                 with_payload=True,
@@ -44,12 +44,10 @@ def _load_indexed_paths() -> set[str]:
             if path:
                 indexed.add(path)
 
-        if len(results) < batch_size:
+        if next_offset is None:
             break
-        offset += batch_size
 
     return indexed
-
 
 def _get_image_meta(path: Path) -> dict:
     """Extract width, height, and file modification timestamp."""
