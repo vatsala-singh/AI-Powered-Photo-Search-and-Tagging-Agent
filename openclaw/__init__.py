@@ -101,7 +101,7 @@ class Agent:
                 if not items:
                     return f"No {title.lower()} found."
                 
-                response = f"✨ {title}:\n"
+                response = f"{title}:\n"
                 if isinstance(items, list):
                     for i, item in enumerate(items, 1):
                         if isinstance(item, dict):
@@ -113,10 +113,10 @@ class Agent:
                             
                             # Format as IMAGE_MARKER for frontend to recognize
                             response += f"\n[IMAGE_MARKER]{path}[/IMAGE_MARKER]\n"
-                            response += f"📄 {filename}\n"
-                            response += f"⭐ Score: {score}\n"
+                            response += f"{filename}\n"
+                            response += f"Score: {score}\n"
                             if tags:
-                                response += f"🏷️ Tags: {', '.join(tags)}\n"
+                                response += f"Tags: {', '.join(tags)}\n"
                         else:
                             response += f"{i}. {str(item)}\n"
                 return response
@@ -125,7 +125,7 @@ class Agent:
         elif isinstance(result, list):
             if not result:
                 return f"No {title.lower()} found."
-            response = f"✨ {title}:\n"
+            response = f"{title}:\n"
             for i, item in enumerate(result, 1):
                 if isinstance(item, dict):
                     # Check if item has an image path
@@ -136,10 +136,10 @@ class Agent:
                     
                     # Format as IMAGE_MARKER for frontend to recognize
                     response += f"\n[IMAGE_MARKER]{path}[/IMAGE_MARKER]\n"
-                    response += f"📄 {filename}\n"
-                    response += f"⭐ Score: {score}\n"
+                    response += f"{filename}\n"
+                    response += f"Score: {score}\n"
                     if tags:
-                        response += f"🏷️ Tags: {', '.join(tags)}\n"
+                        response += f"Tags: {', '.join(tags)}\n"
                 else:
                     response += f"{i}. {str(item)}\n"
             return response

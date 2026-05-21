@@ -15,23 +15,22 @@
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
+            padding: 10px;
         }
 
         .container {
-            width: 100%;
-            max-width: 600px;
+            width: 100vw;
+            max-width: 5000px;
             background: white;
             border-radius: 12px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             display: flex;
             flex-direction: column;
-            height: 80vh;
-            max-height: 600px;
+            height: 100vh;
+            max-height: 5000px;
             overflow: hidden;
         }
 
@@ -269,7 +268,6 @@
 
         <div class="chat-messages" id="messagesContainer">
             <div class="empty-state">
-                <div class="empty-state-icon">🎯</div>
                 <h2>Welcome to Photo Assistant!</h2>
                 <p>Try asking me to:<br>
                    • Find sunset photos<br>
@@ -346,7 +344,7 @@
                         const fallback = document.createElement('p');
                         fallback.style.fontSize = '12px';
                         fallback.style.color = '#999';
-                        fallback.textContent = `📷 Image: ${imagePath}`;
+                        fallback.textContent = `Image: ${imagePath}`;
                         contentDiv.appendChild(fallback);
                     };
                     contentDiv.appendChild(img);
@@ -426,12 +424,12 @@
                         { role: 'assistant', content: data.response }
                     );
                 } else {
-                    addMessage('❌ Sorry, I encountered an error. Please try again.', false);
+                    addMessage('Sorry, I encountered an error. Please try again.', false);
                 }
             } catch (error) {
                 removeTypingIndicator();
                 console.error('Error:', error);
-                addMessage(`❌ Connection error: ${error.message}`, false);
+                addMessage(`Connection error: ${error.message}`, false);
             } finally {
                 sendBtn.disabled = false;
                 messageInput.focus();

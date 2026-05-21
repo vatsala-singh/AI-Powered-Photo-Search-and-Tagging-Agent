@@ -10,7 +10,7 @@ EMBED_DIM = 512
 SHARD_DIR   = Path("./qdrant-edge-data/photos")  # where the shard lives on disk
 VECTOR_NAME = "clip"                         # named vector key inside the shard
 # --- Search ---
-TOP_K = 10                         # default number of results to return
+TOP_K = 5                         # default number of results to return
 DUPLICATE_THRESHOLD = 0.97         # cosine similarity threshold for duplicates
 
 # --- Paths ---
