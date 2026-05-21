@@ -538,6 +538,10 @@ For issues, questions, or suggestions:
 - Check existing issues for solutions
 ---
 
-**Happy searching! 📸**
+**Happy searching!**
+<img width="1592" height="890" alt="Screenshot 2026-05-21 at 8 26 44 PM" src="https://github.com/user-attachments/assets/14040b94-7494-4620-ad18-83d57810f210" />
+<img width="1592" height="890" alt="Screenshot 2026-05-21 at 8 21 37 PM" src="https://github.com/user-attachments/assets/e4b8ce48-bcfa-424a-9346-d7ea26314606" />
+
+
 
 
