@@ -112,7 +112,7 @@ This installs:
 ### 4. Verify installation
 
 ```bash
-python -c "from fastembed import TextEmbedding, ImageEmbedding; from qdrant_edge_py import EdgeShard; print('✓ All dependencies installed')"
+python -c "from fastembed import TextEmbedding, ImageEmbedding; from qdrant_edge import EdgeShard; print('✓ All dependencies installed')"
 ```
 
 ## Configuration
